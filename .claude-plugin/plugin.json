@@ -1,6 +1,6 @@
 {
   "name": "glm-statusline",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Powerline status line for Claude Code with z.ai quota data, Catppuccin theme, nerd font icons",
   "author": {
     "name": "Ngo Tuan Dzung"

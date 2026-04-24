@@ -117,6 +117,7 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 | T22 | x | Vim mode segment: read `session["vim"]["mode"]`, map to icon only (no text), render before cwd. Hide if null/missing. Add `vim` key to theme dicts (Sky accent). | V21,V22,I.stdin |
 | T23 | x | Remove U+2009 thin space from `segment()` and context segment. Use regular space instead. | V18 |
 | T24 | x | Bump plugin.json version 1.0.1 → 1.0.2 | V13 |
+| T25 | x | Bump plugin.json version 1.0.2 → 1.0.3 | V13 |
 
 ## §S — Segment layout (left → right)
 ```
