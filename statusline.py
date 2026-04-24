@@ -24,6 +24,7 @@ RESET = "\x1b[0m"
 # ── T13: Theme dicts (V11) ────────────────────────────────────────────────
 
 THEME_DARK = {
+    "vim":     "\x1b[48;5;117m",  # Sky #89dceb
     "cwd":     "\x1b[48;5;111m",  # Blue #8aadf4
     "model":   "\x1b[48;5;183m",  # Mauve #c6a0f6
     "quota5":  "\x1b[48;5;147m",  # Lavender #b4befe
@@ -36,6 +37,7 @@ THEME_DARK = {
 }
 
 THEME_LIGHT = {
+    "vim":     "\x1b[48;5;32m",   # Sky #04a5e5
     "cwd":     "\x1b[48;5;27m",   # Blue #1e66f5
     "model":   "\x1b[48;5;99m",   # Mauve #8839ef
     "quota5":  "\x1b[48;5;69m",   # Lavender #7287fd
@@ -66,8 +68,23 @@ ICON_CALENDAR = " "
 ICON_PLUG = " "
 ICON_PLUS = " "
 ICON_MINUS = " "
+# Vim mode icons (V21)
+ICON_VIM_NORMAL = " "
+ICON_VIM_INSERT = " "
+ICON_VIM_VISUAL = " "
+ICON_VIM_REPLACE = " "
+ICON_VIM_COMMAND = " "
 # Powerline separator
 SEPARATOR = ""
+
+# V21: mode string → icon
+VIM_ICONS = {
+    "NORMAL": ICON_VIM_NORMAL,
+    "INSERT": ICON_VIM_INSERT,
+    "VISUAL": ICON_VIM_VISUAL,
+    "REPLACE": ICON_VIM_REPLACE,
+    "COMMAND": ICON_VIM_COMMAND,
+}
 
 
 # ── T2: Settings reader (V8) ──────────────────────────────────────────────
@@ -237,7 +254,7 @@ def read_git_branch():
 
 def segment(icon, text, bg, fg):
     """Render a powerline segment: bg + fg icon + text."""
-    return f"{bg}{fg} {icon} {text} "
+    return f"{bg}{fg} {icon} {text} "
 
 
 def bg_to_fg(bg_code):
@@ -304,46 +321,54 @@ def format_countdown(ms_timestamp):
 def build_output(session, quotas, theme):
     """Assemble all segments into final powerline line."""
     fg = theme["fg"]
+    segments = []
+
+    # Vim mode (V21) — icon only, hidden if null/missing
+    vim_mode = _safe(lambda: session["vim_mode"])
+    vim_icon = VIM_ICONS.get(vim_mode) if vim_mode else None
+    if vim_icon:
+        segments.append((segment(vim_icon, "", theme["vim"], fg), theme["vim"]))
+
     # CWD + git
     cwd = _safe(lambda: Path(session["workspace"]["current_dir"]).name) or os.path.basename(os.getcwd())
     branch = read_git_branch()
     cwd_text = f"{cwd} {ICON_BRANCH} {branch}" if branch else cwd
-    seg_cwd = (segment(ICON_FOLDER, cwd_text, theme["cwd"], fg), theme["cwd"])
+    segments.append((segment(ICON_FOLDER, cwd_text, theme["cwd"], fg), theme["cwd"]))
 
     # Model
     model = _safe(lambda: session["model"]["display_name"]) or "--"
-    seg_model = (segment(ICON_SPARKLE, model, theme["model"], fg), theme["model"])
+    segments.append((segment(ICON_SPARKLE, model, theme["model"], fg), theme["model"]))
 
     # Context
     ctx = session.get("context_window")
     ctx_pct = calc_context_pct(ctx)
     bar = progress_bar(ctx_pct, theme)
-    ctx_bg = context_bg(ctx_pct, theme)
-    seg_ctx = (f"{ctx_bg}{fg} {ICON_BRAIN} {bar} {fg}{ctx_pct}% ", ctx_bg)
+    ctx_bg_c = context_bg(ctx_pct, theme)
+    segments.append((f"{ctx_bg_c}{fg} {ICON_BRAIN} {bar} {fg}{ctx_pct}% ", ctx_bg_c))
 
     # 5h quota
     q5 = quotas.get("5h", {})
     q5_pct = q5.get("pct", 0)
     q5_reset = format_countdown(q5.get("reset_ms"))
-    seg_5h = (segment(ICON_CLOCK, f"{q5_pct}% {q5_reset}", theme["quota5"], fg), theme["quota5"])
+    segments.append((segment(ICON_CLOCK, f"{q5_pct}% {q5_reset}", theme["quota5"], fg), theme["quota5"]))
 
     # 7d quota
     q7 = quotas.get("7d", {})
     q7_pct = q7.get("pct", 0)
     q7_reset = format_countdown(q7.get("reset_ms"))
-    seg_7d = (segment(ICON_CALENDAR, f"{q7_pct}% {q7_reset}", theme["quota7"], fg), theme["quota7"])
+    segments.append((segment(ICON_CALENDAR, f"{q7_pct}% {q7_reset}", theme["quota7"], fg), theme["quota7"]))
 
     # MCP
     mcp = quotas.get("mcp", 0)
-    seg_mcp = (segment(ICON_PLUG, f"{mcp}%", theme["mcp"], fg), theme["mcp"])
+    segments.append((segment(ICON_PLUG, f"{mcp}%", theme["mcp"], fg), theme["mcp"]))
 
     # Lines diff
     cost = session.get("cost") or {}
     added = cost.get("total_lines_added") or 0
     removed = cost.get("total_lines_removed") or 0
-    seg_diff = (segment(f"{ICON_PLUS}/{ICON_MINUS}", f"+{added}/-{removed}", theme["diff"], fg), theme["diff"])
+    segments.append((segment(f"{ICON_PLUS}/{ICON_MINUS}", f"+{added}/-{removed}", theme["diff"], fg), theme["diff"]))
 
-    return join_segments(seg_cwd, seg_model, seg_ctx, seg_5h, seg_7d, seg_mcp, seg_diff)
+    return join_segments(*segments)
 
 
 # ── Main (T1) ────────────────────────────────────────────────────────────

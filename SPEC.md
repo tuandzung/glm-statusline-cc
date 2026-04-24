@@ -1,7 +1,7 @@
 # SPEC — GLM StatusLine (Python)
 
 ## §G — Goal
-Python powerline status line for Claude Code. Dual data source: stdin JSON (context, model, lines) + z.ai monitor API (quotas, MCP). Nerd font icons. 60s cache. Color-coded context bar.
+Python powerline status line for Claude Code. Dual data source: stdin JSON (context, model, lines, vim mode) + z.ai monitor API (quotas, MCP). Nerd font icons. 60s cache. Color-coded context bar. Vim mode indicator before cwd segment.
 
 ## §C — Constraints
 - Python 3, stdlib only (json, sys, os, datetime, http.client, urllib.parse, pathlib)
@@ -38,7 +38,8 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
   "model": { "id": str, "display_name": str },
   "workspace": { "current_dir": str },
   "context_window": { "used_percentage": float?, "context_window_size": int?, "total_input_tokens": int?, "total_output_tokens": int? },
-  "cost": { "total_lines_added": int?, "total_lines_removed": int? }
+  "cost": { "total_lines_added": int?, "total_lines_removed": int? },
+  "vim_mode": str?  // "NORMAL" | "INSERT" | "VISUAL" | "REPLACE" | "COMMAND"
 }
 ```
 
@@ -83,9 +84,10 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 - **V15**: `.claude-plugin/marketplace.json` lists plugin with `source.source: "github"` pointing to this repo.
 - **V16**: README has setup instructions: install command + settings.json config for statusLine.command.
 - **V17**: `skills/install-statusline/SKILL.md` exists. Instructs agent to write `statusLine.command` + `refreshInterval` to `~/.claude/settings.json`.
-- **V18**: ∀ segments → icon padded with thin space (U+2009) each side: ` {icon} {text}`. Separator between icon+text. No trailing space before segment end.
+- **V18**: ∀ segments → no thin space (U+2009) padding. No U+2009 in output. Regular space between icon and text.
 - **V19**: ∀ `ICON_*` constants → trailing space appended. Normalizes variable-width nerd font glyphs to consistent visual width.
 - **V20**: `SKILL.md` ! have YAML frontmatter with `description` and `allowed-tools` fields. `allowed-tools` lists Read, Write, Bash.
+- **V21**: Vim mode segment rendered before cwd+git. Icon only — no text label. Icon per mode: NORMAL→`\ue62b`, INSERT→`\uf01f`, VISUAL→`\uf06e`, REPLACE→`\ueb3d`, COMMAND→`\ue795`. Missing/null → segment hidden (no empty segment in output). Bg = Sky accent per theme.
 
 ## §T — Tasks
 | id | status | desc | deps |
@@ -107,17 +109,25 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 | T15 | x | Create `.claude-plugin/marketplace.json` with github source entry | V15,I.marketplace-manifest |
 | T16 | x | Write README: install command, settings.json config, theme env var, screenshot placeholder | V16,I.plugin-install |
 | T17 | x | Create `skills/install-statusline/SKILL.md` with agent install instructions | V17,I.plugin-skill |
-| T18 | x | Thin space (U+2009) padding around icons in `segment()`. Change ` {icon} {text} ` → ` {icon} {text} `. Update context segment too. | V18 |
+| T18 | x | Add thin space (U+2009) padding around icons in `segment()`. [Superseded by T23 which removed it] | V18 |
 | T19 | x | Append trailing space to all `ICON_*` constants in statusline.py. Normalize variable-width glyph rendering. | V19 |
-| T20 | x | Bump plugin.json version 1.0.0 → 1.0.1 | V13 |
+| T20 | x | Bump plugin.json version 1.0.0 → 1.0.1 [now 1.0.2 via T24] | V13 |
 | T21 | x | Add YAML frontmatter (description, allowed-tools) to SKILL.md | V20,I.plugin-skill |
+| T22 | x | Vim mode segment: read `session["vim_mode"]`, map to icon only (no text), render before cwd. Hide if null/missing. Add `vim` key to theme dicts (Sky accent). | V21,I.stdin |
+| T23 | x | Remove U+2009 thin space from `segment()` and context segment. Use regular space instead. | V18 |
+| T24 | x | Bump plugin.json version 1.0.1 → 1.0.2 | V13 |
 
 ## §S — Segment layout (left → right)
 ```
-[ ] proj  main  [ ] GLM-5.1  [  ] [●●●●○○○○] 80%  [ ] 5h 30% ↺2h  [ ] 7d 12% ↺5d  [󰌟] MCP 5%  [ ] +42/-18
+[ ] [ ] proj  main  [ ] GLM-5.1  [  ] [●●●●○○○○] 80%  [ ] 5h 30% ↺2h  [ ] 7d 12% ↺5d  [󰌟] MCP 5%  [ ] +42/-18
 ```
 
 Nerd font icons:
+- `\ue62b` U+E62B — fn-N (NORMAL)
+- `\uf01f` U+F01F — file/edit (INSERT)
+- `\uf06e` U+F06E — eye (VISUAL)
+- `\ueb3d` U+EB3D — replace (REPLACE)
+- `\ue795` U+E795 — terminal/cmd (COMMAND)
 - ` ` U+E5FF — folder (cwd)
 - `󰊢` U+E725 — git branch
 - ` ` U+F4B8 — sparkles (model)
@@ -130,6 +140,7 @@ Nerd font icons:
 Segment bg colors (Catppuccin accent):
 | segment | Dark (Macchiato) | Light (Latte) |
 |---------|-------------------|----------------|
+| vim | Sky #89dceb (256:117) | Sky #04a5e5 (256:32) |
 | cwd | Blue #8aadf4 (256:111) | Blue #1e66f5 (256:27) |
 | model | Mauve #c6a0f6 (256:183) | Mauve #8839ef (256:99) |
 | context | dynamic (V3, accent bg) | dynamic (V3, accent bg) |
