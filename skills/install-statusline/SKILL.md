@@ -1,3 +1,11 @@
+---
+description: Configure GLM StatusLine in Claude Code settings
+allowed-tools:
+  - Read
+  - Write
+  - Bash
+---
+
 # install-statusline
 
 Configure GLM StatusLine in Claude Code settings.

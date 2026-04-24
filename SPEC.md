@@ -30,7 +30,7 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 | I.plugin-manifest | `.claude-plugin/plugin.json` | name, version, description, author, repository, license |
 | I.marketplace-manifest | `.claude-plugin/marketplace.json` | lists plugin with github source for marketplace distribution |
 | I.plugin-install | `claude plugin install glm-statusline@marketplace` or `claude --plugin-dir ./` | user installs plugin, then sets statusLine.command |
-| I.plugin-skill | `skills/install-statusline/SKILL.md` | agent instructions to configure statusLine.command in ~/.claude/settings.json |
+| I.plugin-skill | `skills/install-statusline/SKILL.md` | YAML frontmatter: description + allowed-tools (Read, Write, Bash). Body: agent configure instructions |
 
 ### I.stdin — JSON shape
 ```
@@ -85,6 +85,7 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 - **V17**: `skills/install-statusline/SKILL.md` exists. Instructs agent to write `statusLine.command` + `refreshInterval` to `~/.claude/settings.json`.
 - **V18**: ∀ segments → icon padded with thin space (U+2009) each side: ` {icon} {text}`. Separator between icon+text. No trailing space before segment end.
 - **V19**: ∀ `ICON_*` constants → trailing space appended. Normalizes variable-width nerd font glyphs to consistent visual width.
+- **V20**: `SKILL.md` ! have YAML frontmatter with `description` and `allowed-tools` fields. `allowed-tools` lists Read, Write, Bash.
 
 ## §T — Tasks
 | id | status | desc | deps |
@@ -108,6 +109,8 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 | T17 | x | Create `skills/install-statusline/SKILL.md` with agent install instructions | V17,I.plugin-skill |
 | T18 | x | Thin space (U+2009) padding around icons in `segment()`. Change ` {icon} {text} ` → ` {icon} {text} `. Update context segment too. | V18 |
 | T19 | x | Append trailing space to all `ICON_*` constants in statusline.py. Normalize variable-width glyph rendering. | V19 |
+| T20 | x | Bump plugin.json version 1.0.0 → 1.0.1 | V13 |
+| T21 | x | Add YAML frontmatter (description, allowed-tools) to SKILL.md | V20,I.plugin-skill |
 
 ## §S — Segment layout (left → right)
 ```
