@@ -10,7 +10,7 @@ Powerline status line for Claude Code. Dual data source: stdin JSON (context, mo
 
 | Segment | Info |
 |---------|------|
-| Vim mode | Current vim mode icon (NORMAL/INSERT/VISUAL/REPLACE/COMMAND). Hidden if not in vim mode |
+| Vim mode | Current vim mode icon (NORMAL/INSERT/VISUAL/VISUAL LINE/REPLACE/COMMAND). Hidden if not in vim mode |
 | CWD + git | Project folder and branch |
 | Model | Display name from Claude Code |
 | Context | Usage % with progress bar (green/yellow/red) |

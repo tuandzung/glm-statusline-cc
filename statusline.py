@@ -82,6 +82,7 @@ VIM_ICONS = {
     "NORMAL": ICON_VIM_NORMAL,
     "INSERT": ICON_VIM_INSERT,
     "VISUAL": ICON_VIM_VISUAL,
+    "VISUAL LINE": ICON_VIM_VISUAL,
     "REPLACE": ICON_VIM_REPLACE,
     "COMMAND": ICON_VIM_COMMAND,
 }
@@ -323,8 +324,8 @@ def build_output(session, quotas, theme):
     fg = theme["fg"]
     segments = []
 
-    # Vim mode (V21) — icon only, hidden if null/missing
-    vim_mode = _safe(lambda: session["vim_mode"])
+    # Vim mode (V21) — icon only, hidden if null/missing (V22: nested path)
+    vim_mode = _safe(lambda: session["vim"]["mode"])
     vim_icon = VIM_ICONS.get(vim_mode) if vim_mode else None
     if vim_icon:
         segments.append((segment(vim_icon, "", theme["vim"], fg), theme["vim"]))

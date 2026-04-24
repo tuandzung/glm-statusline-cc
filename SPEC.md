@@ -21,7 +21,7 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 ## §I — Interfaces
 | id | surface | notes |
 |----|---------|-------|
-| I.stdin | Claude Code statusLine JSON | model, workspace, context_window, cost |
+| I.stdin | Claude Code statusLine JSON | model, workspace, context_window, cost, vim |
 | I.api-quota | `GET {baseDomain}/api/monitor/usage/quota/limit` | Auth: `Authorization: {token}` |
 | I.api-model | `GET {baseDomain}/api/monitor/usage/model-usage?startTime=...&endTime=...` | Auth: same |
 | I.api-tool | `GET {baseDomain}/api/monitor/usage/tool-usage?startTime=...&endTime=...` | Auth: same |
@@ -39,7 +39,7 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
   "workspace": { "current_dir": str },
   "context_window": { "used_percentage": float?, "context_window_size": int?, "total_input_tokens": int?, "total_output_tokens": int? },
   "cost": { "total_lines_added": int?, "total_lines_removed": int? },
-  "vim_mode": str?  // "NORMAL" | "INSERT" | "VISUAL" | "REPLACE" | "COMMAND"
+  "vim": { "mode": str? }  // "NORMAL" | "INSERT" | "VISUAL" | "VISUAL LINE" | "REPLACE" | "COMMAND"
 }
 ```
 
@@ -88,6 +88,7 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 - **V19**: ∀ `ICON_*` constants → trailing space appended. Normalizes variable-width nerd font glyphs to consistent visual width.
 - **V20**: `SKILL.md` ! have YAML frontmatter with `description` and `allowed-tools` fields. `allowed-tools` lists Read, Write, Bash.
 - **V21**: Vim mode segment rendered before cwd+git. Icon only — no text label. Icon per mode: NORMAL→`\ue62b`, INSERT→`\uf01f`, VISUAL→`\uf06e`, REPLACE→`\ueb3d`, COMMAND→`\ue795`. Missing/null → segment hidden (no empty segment in output). Bg = Sky accent per theme.
+- **V22**: ∀ vim mode access → path `session["vim"]["mode"]`, not `session["vim_mode"]`. §I.stdin shape is nested `vim: { mode: str? }`. VISUAL LINE maps to same icon as VISUAL.
 
 ## §T — Tasks
 | id | status | desc | deps |
@@ -113,7 +114,7 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 | T19 | x | Append trailing space to all `ICON_*` constants in statusline.py. Normalize variable-width glyph rendering. | V19 |
 | T20 | x | Bump plugin.json version 1.0.0 → 1.0.1 [now 1.0.2 via T24] | V13 |
 | T21 | x | Add YAML frontmatter (description, allowed-tools) to SKILL.md | V20,I.plugin-skill |
-| T22 | x | Vim mode segment: read `session["vim_mode"]`, map to icon only (no text), render before cwd. Hide if null/missing. Add `vim` key to theme dicts (Sky accent). | V21,I.stdin |
+| T22 | x | Vim mode segment: read `session["vim"]["mode"]`, map to icon only (no text), render before cwd. Hide if null/missing. Add `vim` key to theme dicts (Sky accent). | V21,V22,I.stdin |
 | T23 | x | Remove U+2009 thin space from `segment()` and context segment. Use regular space instead. | V18 |
 | T24 | x | Bump plugin.json version 1.0.1 → 1.0.2 | V13 |
 
@@ -160,3 +161,4 @@ Dark context bg: Green 150, Yellow 223, Red 210. Light context bg: Green 70, Yel
 | B2 | 2026-04-23 | Powerline separator fg=white instead of next-bg → broken visual transition | V10 |
 | B3 | 2026-04-24 | V10 stated wrong direction: fg=next-bg instead of fg=prev-bg. Code used bg escape (48;5) not fg (38;5) for separator → inherited FG_WHITE | V10 |
 | B4 | 2026-04-24 | Context bg used arbitrary ANSI colors (28/142/160) not Catppuccin accent → looked generic | V12 |
+| B5 | 2026-04-24 | §I.stdin claimed `vim_mode` flat string, actual shape is `vim.mode` nested object → segment always hidden | V22 |
