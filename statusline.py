@@ -57,16 +57,15 @@ def resolve_theme():
 
 
 # Nerd font icons
-ICON_FOLDER  = ""
-ICON_BRANCH  = ""
-ICON_SPARKLE = ""
-ICON_BRAIN   = ""
-ICON_CLOCK   = ""
-ICON_CALENDAR = ""
-ICON_PLUG    = ""
-ICON_PLUS    = ""
-ICON_MINUS   = ""
-
+ICON_FOLDER = " "
+ICON_BRANCH = " "
+ICON_SPARKLE = " "
+ICON_BRAIN = " "
+ICON_CLOCK = " "
+ICON_CALENDAR = " "
+ICON_PLUG = " "
+ICON_PLUS = " "
+ICON_MINUS = " "
 # Powerline separator
 SEPARATOR = ""
 
@@ -238,7 +237,7 @@ def read_git_branch():
 
 def segment(icon, text, bg, fg):
     """Render a powerline segment: bg + fg icon + text."""
-    return f"{bg}{fg} {icon} {text} "
+    return f"{bg}{fg} {icon} {text} "
 
 
 def bg_to_fg(bg_code):
@@ -320,7 +319,7 @@ def build_output(session, quotas, theme):
     ctx_pct = calc_context_pct(ctx)
     bar = progress_bar(ctx_pct, theme)
     ctx_bg = context_bg(ctx_pct, theme)
-    seg_ctx = (f"{ctx_bg}{fg} {ICON_BRAIN} {bar} {fg}{ctx_pct}% ", ctx_bg)
+    seg_ctx = (f"{ctx_bg}{fg} {ICON_BRAIN} {bar} {fg}{ctx_pct}% ", ctx_bg)
 
     # 5h quota
     q5 = quotas.get("5h", {})

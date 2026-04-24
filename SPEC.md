@@ -83,6 +83,8 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 - **V15**: `.claude-plugin/marketplace.json` lists plugin with `source.source: "github"` pointing to this repo.
 - **V16**: README has setup instructions: install command + settings.json config for statusLine.command.
 - **V17**: `skills/install-statusline/SKILL.md` exists. Instructs agent to write `statusLine.command` + `refreshInterval` to `~/.claude/settings.json`.
+- **V18**: ∀ segments → icon padded with thin space (U+2009) each side: ` {icon} {text}`. Separator between icon+text. No trailing space before segment end.
+- **V19**: ∀ `ICON_*` constants → trailing space appended. Normalizes variable-width nerd font glyphs to consistent visual width.
 
 ## §T — Tasks
 | id | status | desc | deps |
@@ -104,6 +106,8 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 | T15 | x | Create `.claude-plugin/marketplace.json` with github source entry | V15,I.marketplace-manifest |
 | T16 | x | Write README: install command, settings.json config, theme env var, screenshot placeholder | V16,I.plugin-install |
 | T17 | x | Create `skills/install-statusline/SKILL.md` with agent install instructions | V17,I.plugin-skill |
+| T18 | x | Thin space (U+2009) padding around icons in `segment()`. Change ` {icon} {text} ` → ` {icon} {text} `. Update context segment too. | V18 |
+| T19 | x | Append trailing space to all `ICON_*` constants in statusline.py. Normalize variable-width glyph rendering. | V19 |
 
 ## §S — Segment layout (left → right)
 ```
