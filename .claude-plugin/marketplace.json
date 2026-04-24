@@ -1,0 +1,16 @@
+{
+  "name": "glm-plugins",
+  "owner": {
+    "name": "Ngo Tuan Dzung"
+  },
+  "plugins": [
+    {
+      "name": "glm-statusline",
+      "source": {
+        "source": "github",
+        "repo": "tuandzung/glm-statusline-cc"
+      },
+      "description": "Powerline status line for Claude Code with z.ai quota data, Catppuccin theme, nerd font icons"
+    }
+  ]
+}

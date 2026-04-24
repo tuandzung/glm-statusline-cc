@@ -1,0 +1,11 @@
+{
+  "name": "glm-statusline",
+  "version": "1.0.0",
+  "description": "Powerline status line for Claude Code with z.ai quota data, Catppuccin theme, nerd font icons",
+  "author": {
+    "name": "Ngo Tuan Dzung"
+  },
+  "repository": "https://github.com/tuandzung/glm-statusline-cc",
+  "license": "MIT",
+  "keywords": ["statusline", "powerline", "catppuccin", "z.ai", "glm"]
+}

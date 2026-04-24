@@ -14,6 +14,9 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 - File cache at `~/.claude/zai-usage-cache.json`, TTL 60s success / 15s failure
 - API timeout 2s, fail gracefully
 - refreshInterval: 60 in settings.json
+- Claude Code plugin format: `.claude-plugin/plugin.json` manifest
+- Plugin uses `${CLAUDE_PLUGIN_ROOT}/statusline.py` for path resolution
+- Marketplace manifest: `.claude-plugin/marketplace.json` for distribution via GitHub
 
 ## §I — Interfaces
 | id | surface | notes |
@@ -23,7 +26,11 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 | I.api-model | `GET {baseDomain}/api/monitor/usage/model-usage?startTime=...&endTime=...` | Auth: same |
 | I.api-tool | `GET {baseDomain}/api/monitor/usage/tool-usage?startTime=...&endTime=...` | Auth: same |
 | I.settings | `~/.claude/settings.json` → env.ANTHROPIC_BASE_URL, env.ANTHROPIC_AUTH_TOKEN | also check project-level .claude/settings.json |
-| I.git | Read `.git/HEAD` from cwd | fallback: `git rev-parse --abbrev-ref HEAD` |
+| I.git | Read `.git/HEAD` from cwd, parse `ref: refs/heads/` prefix | returns empty string if detached/not a git repo |
+| I.plugin-manifest | `.claude-plugin/plugin.json` | name, version, description, author, repository, license |
+| I.marketplace-manifest | `.claude-plugin/marketplace.json` | lists plugin with github source for marketplace distribution |
+| I.plugin-install | `claude plugin install glm-statusline@marketplace` or `claude --plugin-dir ./` | user installs plugin, then sets statusLine.command |
+| I.plugin-skill | `skills/install-statusline/SKILL.md` | agent instructions to configure statusLine.command in ~/.claude/settings.json |
 
 ### I.stdin — JSON shape
 ```
@@ -71,6 +78,11 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 - **V10**: Powerline separator `` (U+E0B0): fg = prev segment bg color, bg = next segment bg color. ∀ adjacent segments (A,B): separator fg = A.bg number, bg = B.bg number.
 - **V11**: Theme resolved at startup from `STATUSLINE_THEME` env var. `dark` → Macchiato, `light` → Latte. Missing/invalid → dark. No runtime switching.
 - **V12**: ∀ theme ctx_bg.{green,yellow,red} color numbers must match theme's Catppuccin accent 256 codes (dark: 150/223/210, light: 70/172/161). No arbitrary ANSI picks for context bg.
+- **V13**: `.claude-plugin/plugin.json` exists with `name`, `version`, `description` fields. Valid JSON.
+- **V14**: `statusline.py` at plugin root. `statusLine.command` refs `${CLAUDE_PLUGIN_ROOT}/statusline.py`. No hardcoded paths.
+- **V15**: `.claude-plugin/marketplace.json` lists plugin with `source.source: "github"` pointing to this repo.
+- **V16**: README has setup instructions: install command + settings.json config for statusLine.command.
+- **V17**: `skills/install-statusline/SKILL.md` exists. Instructs agent to write `statusLine.command` + `refreshInterval` to `~/.claude/settings.json`.
 
 ## §T — Tasks
 | id | status | desc | deps |
@@ -81,13 +93,17 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 | T4 | x | Cache: load/save `~/.claude/zai-usage-cache.json`, TTL check per V5 | V5 |
 | T5 | x | Fetch quota: GET /api/monitor/usage/quota/limit → parse 5h (1st TOKENS_LIMIT), 7d (2nd TOKENS_LIMIT), MCP (TIME_LIMIT) | I.api-quota,V9,T4 |
 | T6 | x | Context usage: from stdin `used_percentage`, fallback calc from total_tokens / context_window_size | I.stdin |
-| T7 | x | Git branch: read `.git/HEAD`, parse `ref: refs/heads/` prefix | I.git |
+| T7 | x | Git branch: read `.git/HEAD`, parse `ref: refs/heads/` prefix, empty on detached | I.git |
 | T8 | x | Powerline renderer: `segment(icon, text, bg, fg)` + `separator(prev_bg, next_bg)` | V6 |
 | T9 | x | Progress bar: `bar(pct, width=10)` with color per V3 | V3 |
 | T10 | x | Countdown formatter: ms timestamp → "Xh Xm" or "Xm" | V5 |
 | T11 | x | Assemble segments: cwd+git, model, context+bar, 5h-quota, 7d-quota, mcp, lines +/- | T5–T10 |
 | T12 | x | Wire settings.json: statusLine.command → `python3 /path/to/statusline.py`, refreshInterval=60 | I.settings |
 | T13 | x | Theme switcher: read STATUSLINE_THEME env, select Macchiato/Latte color dicts, pass to renderer | V11 |
+| T14 | x | Create `.claude-plugin/plugin.json` with name, version, description, author, repository, license | V13,I.plugin-manifest |
+| T15 | x | Create `.claude-plugin/marketplace.json` with github source entry | V15,I.marketplace-manifest |
+| T16 | x | Write README: install command, settings.json config, theme env var, screenshot placeholder | V16,I.plugin-install |
+| T17 | x | Create `skills/install-statusline/SKILL.md` with agent install instructions | V17,I.plugin-skill |
 
 ## §S — Segment layout (left → right)
 ```
