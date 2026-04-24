@@ -21,31 +21,46 @@ SUPPORTED_DOMAINS = ("api.z.ai", "open.bigmodel.cn", "dev.bigmodel.cn")
 
 RESET = "\x1b[0m"
 
-# Segment bg colors (256-color)
-BG_CWD     = "\x1b[48;5;61m"   # #5f5faf
-BG_MODEL   = "\x1b[48;5;31m"   # #0087af
-BG_QUOTA5  = "\x1b[48;5;97m"   # #875faf
-BG_QUOTA7  = "\x1b[48;5;24m"   # #005f87
-BG_MCP     = "\x1b[48;5;64m"   # #5f8700
-BG_DIFF    = "\x1b[48;5;95m"   # #875f5f
-FG_WHITE   = "\x1b[38;5;254m"  # #eeeeee
+# ── T13: Theme dicts (V11) ────────────────────────────────────────────────
 
-# Dynamic context bg colors
-BG_GREEN   = "\x1b[48;5;22m"   # #008700
-BG_YELLOW  = "\x1b[48;5;142m"  # #afaf00 (dark yellow for bg readability)
-BG_RED     = "\x1b[48;5;210m"  # light red
+THEME_DARK = {
+    "cwd":     "\x1b[48;5;111m",  # Blue #8aadf4
+    "model":   "\x1b[48;5;183m",  # Mauve #c6a0f6
+    "quota5":  "\x1b[48;5;147m",  # Lavender #b4befe
+    "quota7":  "\x1b[48;5;116m",  # Sapphire #7dc4e4
+    "mcp":     "\x1b[48;5;152m",  # Teal #8bd5ca
+    "diff":    "\x1b[48;5;216m",  # Peach #fab387
+    "fg":      "\x1b[38;5;17m",   # Base #1e2030
+    "ctx_bg":  {"green": "\x1b[48;5;150m", "yellow": "\x1b[48;5;223m", "red": "\x1b[48;5;210m"},
+    "bar":     {"filled": "\x1b[38;5;17m", "empty": "\x1b[38;5;60m"},
+}
 
-# Bar colors (fg)
-FG_BAR_GREEN  = "\x1b[38;5;76m"
-FG_BAR_YELLOW = "\x1b[38;5;226m"
-FG_BAR_RED    = "\x1b[38;5;210m"
-FG_BAR_EMPTY  = "\x1b[38;5;245m"
+THEME_LIGHT = {
+    "cwd":     "\x1b[48;5;27m",   # Blue #1e66f5
+    "model":   "\x1b[48;5;99m",   # Mauve #8839ef
+    "quota5":  "\x1b[48;5;69m",   # Lavender #7287fd
+    "quota7":  "\x1b[48;5;31m",   # Sapphire #209fb5
+    "mcp":     "\x1b[48;5;30m",   # Teal #179299
+    "diff":    "\x1b[48;5;208m",  # Peach #fe640b
+    "fg":      "\x1b[38;5;231m",  # Base #eff1f5
+    "ctx_bg":  {"green": "\x1b[48;5;70m", "yellow": "\x1b[48;5;172m", "red": "\x1b[48;5;161m"},
+    "bar":     {"filled": "\x1b[38;5;231m", "empty": "\x1b[38;5;146m"},
+}
+
+
+def resolve_theme():
+    """Read STATUSLINE_THEME env, return theme dict. V11: dark default."""
+    val = os.environ.get("STATUSLINE_THEME", "").strip().lower()
+    if val == "light":
+        return THEME_LIGHT
+    return THEME_DARK
+
 
 # Nerd font icons
 ICON_FOLDER  = ""
 ICON_BRANCH  = ""
 ICON_SPARKLE = ""
-ICON_BRAIN   = ""
+ICON_BRAIN   = ""
 ICON_CLOCK   = ""
 ICON_CALENDAR = ""
 ICON_PLUG    = ""
@@ -221,9 +236,14 @@ def read_git_branch():
 
 # ── T8: Powerline renderer (V6) ──────────────────────────────────────────
 
-def segment(icon, text, bg, fg=FG_WHITE):
+def segment(icon, text, bg, fg):
     """Render a powerline segment: bg + fg icon + text."""
     return f"{bg}{fg} {icon} {text} "
+
+
+def bg_to_fg(bg_code):
+    """Convert bg escape code (48;5) to fg escape code (38;5)."""
+    return bg_code.replace("48;5;", "38;5;")
 
 
 def join_segments(*segs_with_bg):
@@ -235,38 +255,31 @@ def join_segments(*segs_with_bg):
     for i, (seg, bg) in enumerate(segs_with_bg):
         if i > 0:
             prev_bg = segs_with_bg[i - 1][1]
-            parts.append(f"{prev_bg}{bg}{SEPARATOR}")
+            parts.append(f"{bg_to_fg(prev_bg)}{bg}{SEPARATOR}")
         parts.append(seg)
     if segs_with_bg:
         last_bg = segs_with_bg[-1][1]
-        parts.append(f"{last_bg}\x1b[38;5;0m{SEPARATOR}{RESET}")
+        parts.append(f"{bg_to_fg(last_bg)}\x1b[48;5;0m{SEPARATOR}{RESET}")
     return "".join(parts)
 
 
 
 # ── T9: Progress bar (V3) ────────────────────────────────────────────────
 
-def progress_bar(pct, width=10):
-    """Colored progress bar per V3."""
+def progress_bar(pct, theme, width=10):
+    """Colored progress bar per V3. Filled=Base, empty=Surface2."""
     filled = round((pct / 100) * width)
     empty = width - filled
-    if pct > 80:
-        color = FG_BAR_RED
-    elif pct >= 50:
-        color = FG_BAR_YELLOW
-    else:
-        color = FG_BAR_GREEN
-    bar = f"{color}{'█' * filled}{FG_BAR_EMPTY}{'░' * empty}"
-    return bar
+    return f"{theme['bar']['filled']}{'●' * filled}{theme['bar']['empty']}{'○' * empty}"
 
 
-def context_bg(pct):
+def context_bg(pct, theme):
     """Return bg color for context segment based on pct (V3)."""
     if pct > 80:
-        return BG_RED
+        return theme["ctx_bg"]["red"]
     elif pct >= 50:
-        return BG_YELLOW
-    return BG_GREEN
+        return theme["ctx_bg"]["yellow"]
+    return theme["ctx_bg"]["green"]
 
 
 # ── T10: Countdown formatter ─────────────────────────────────────────────
@@ -289,46 +302,47 @@ def format_countdown(ms_timestamp):
 
 # ── T11: Assemble ────────────────────────────────────────────────────────
 
-def build_output(session, quotas):
+def build_output(session, quotas, theme):
     """Assemble all segments into final powerline line."""
+    fg = theme["fg"]
     # CWD + git
     cwd = _safe(lambda: Path(session["workspace"]["current_dir"]).name) or os.path.basename(os.getcwd())
     branch = read_git_branch()
     cwd_text = f"{cwd} {ICON_BRANCH} {branch}" if branch else cwd
-    seg_cwd = (segment(ICON_FOLDER, cwd_text, BG_CWD), BG_CWD)
+    seg_cwd = (segment(ICON_FOLDER, cwd_text, theme["cwd"], fg), theme["cwd"])
 
     # Model
     model = _safe(lambda: session["model"]["display_name"]) or "--"
-    seg_model = (segment(ICON_SPARKLE, model, BG_MODEL), BG_MODEL)
+    seg_model = (segment(ICON_SPARKLE, model, theme["model"], fg), theme["model"])
 
     # Context
     ctx = session.get("context_window")
     ctx_pct = calc_context_pct(ctx)
-    bar = progress_bar(ctx_pct)
-    ctx_bg = context_bg(ctx_pct)
-    seg_ctx = (f"{ctx_bg}{FG_WHITE} {ICON_BRAIN} {bar} {FG_WHITE}{ctx_pct}% ", ctx_bg)
+    bar = progress_bar(ctx_pct, theme)
+    ctx_bg = context_bg(ctx_pct, theme)
+    seg_ctx = (f"{ctx_bg}{fg} {ICON_BRAIN} {bar} {fg}{ctx_pct}% ", ctx_bg)
 
     # 5h quota
     q5 = quotas.get("5h", {})
     q5_pct = q5.get("pct", 0)
     q5_reset = format_countdown(q5.get("reset_ms"))
-    seg_5h = (segment(ICON_CLOCK, f"{q5_pct}% {q5_reset}", BG_QUOTA5), BG_QUOTA5)
+    seg_5h = (segment(ICON_CLOCK, f"{q5_pct}% {q5_reset}", theme["quota5"], fg), theme["quota5"])
 
     # 7d quota
     q7 = quotas.get("7d", {})
     q7_pct = q7.get("pct", 0)
     q7_reset = format_countdown(q7.get("reset_ms"))
-    seg_7d = (segment(ICON_CALENDAR, f"{q7_pct}% {q7_reset}", BG_QUOTA7), BG_QUOTA7)
+    seg_7d = (segment(ICON_CALENDAR, f"{q7_pct}% {q7_reset}", theme["quota7"], fg), theme["quota7"])
 
     # MCP
     mcp = quotas.get("mcp", 0)
-    seg_mcp = (segment(ICON_PLUG, f"{mcp}%", BG_MCP), BG_MCP)
+    seg_mcp = (segment(ICON_PLUG, f"{mcp}%", theme["mcp"], fg), theme["mcp"])
 
     # Lines diff
     cost = session.get("cost") or {}
     added = cost.get("total_lines_added") or 0
     removed = cost.get("total_lines_removed") or 0
-    seg_diff = (segment(f"{ICON_PLUS}/{ICON_MINUS}", f"+{added}/-{removed}", BG_DIFF), BG_DIFF)
+    seg_diff = (segment(f"{ICON_PLUS}/{ICON_MINUS}", f"+{added}/-{removed}", theme["diff"], fg), theme["diff"])
 
     return join_segments(seg_cwd, seg_model, seg_ctx, seg_5h, seg_7d, seg_mcp, seg_diff)
 
@@ -379,8 +393,9 @@ def main():
     if quotas is None:
         quotas = {"5h": {"pct": 0, "reset_ms": None}, "7d": {"pct": 0, "reset_ms": None}, "mcp": 0}
 
-    # Build and print
-    output = build_output(session, quotas)
+    # Build and print (V11)
+    theme = resolve_theme()
+    output = build_output(session, quotas, theme)
     print(output)
 
 

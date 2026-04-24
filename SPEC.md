@@ -7,6 +7,7 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 - Python 3, stdlib only (json, sys, os, datetime, http.client, urllib.parse, pathlib)
 - Read JSON from stdin (Claude Code session context) + call z.ai API for quota data
 - ANSI 256-color codes for segment fg/bg
+- Color theme: Catppuccin Macchiato (dark, default) or Catppuccin Latte (light). Select via env var `STATUSLINE_THEME` (values: `dark`|`light`). Missing/invalid → dark.
 - Powerline separator `` (U+E0B0) between segments
 - Context progress bar: green < 50%, yellow 50–80%, light red > 80%
 - Null/missing → `--`, never crash
@@ -60,14 +61,16 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 ## §V — Invariants
 - **V1**: Script exits 0 always. Errors → display `--` for that segment, never crash.
 - **V2**: Null/missing fields → `--`. No KeyError, no unhandled exception.
-- **V3**: Context bar gradient: `<50%` green (#008700), `50–80%` yellow (#afaf00), `>80%` light red (#ff6b6b). Bar: `█` filled + `░` empty, width 10.
+- **V3**: Context segment bg gradient: `<50%` Green (#a6da95), `50–80%` Yellow (#eed49f), `>80%` Red (#ed8796). Bar: `●` filled + `○` empty, width 10. Bar filled = theme Base, bar empty = theme Surface2.
 - **V4**: API calls have 2s timeout. On failure → use cache or show `--`.
 - **V5**: Cache file `~/.claude/zai-usage-cache.json`. TTL 60s success, 15s failure.
 - **V6**: Each segment: nerd font icon + value. Segments separated by powerline `` with bg color transition.
 - **V7**: `ANTHROPIC_BASE_URL` → extract protocol+host → build API URLs. Supported domains: api.z.ai, open.bigmodel.cn, dev.bigmodel.cn.
 - **V8**: Read settings from: project `.claude/settings.local.json` → project `.claude/settings.json` → `~/.claude/settings.json`. First with both ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN wins.
 - **V9**: ∀ TOKENS_LIMIT parsing → match by position (1st=short, 2nd=long), not hardcoded unit values. API unit schema may change.
-- **V10**: Powerline separator: fg = next segment bg. ∀ adjacent segments (A,B): `A.bg + B.bg + `.
+- **V10**: Powerline separator `` (U+E0B0): fg = prev segment bg color, bg = next segment bg color. ∀ adjacent segments (A,B): separator fg = A.bg number, bg = B.bg number.
+- **V11**: Theme resolved at startup from `STATUSLINE_THEME` env var. `dark` → Macchiato, `light` → Latte. Missing/invalid → dark. No runtime switching.
+- **V12**: ∀ theme ctx_bg.{green,yellow,red} color numbers must match theme's Catppuccin accent 256 codes (dark: 150/223/210, light: 70/172/161). No arbitrary ANSI picks for context bg.
 
 ## §T — Tasks
 | id | status | desc | deps |
@@ -84,28 +87,42 @@ Python powerline status line for Claude Code. Dual data source: stdin JSON (cont
 | T10 | x | Countdown formatter: ms timestamp → "Xh Xm" or "Xm" | V5 |
 | T11 | x | Assemble segments: cwd+git, model, context+bar, 5h-quota, 7d-quota, mcp, lines +/- | T5–T10 |
 | T12 | x | Wire settings.json: statusLine.command → `python3 /path/to/statusline.py`, refreshInterval=60 | I.settings |
+| T13 | x | Theme switcher: read STATUSLINE_THEME env, select Macchiato/Latte color dicts, pass to renderer | V11 |
 
 ## §S — Segment layout (left → right)
 ```
-[ ] proj  main  [ ] GLM-5.1  [  ] [████████░░] 80%  [ ] 5h 30% ↺2h  [ ] 7d 12% ↺5d  [󰌟] MCP 5%  [ ] +42/-18
+[ ] proj  main  [ ] GLM-5.1  [  ] [●●●●○○○○] 80%  [ ] 5h 30% ↺2h  [ ] 7d 12% ↺5d  [󰌟] MCP 5%  [ ] +42/-18
 ```
 
 Nerd font icons:
 - ` ` U+E5FF — folder (cwd)
 - `󰊢` U+E725 — git branch
 - ` ` U+F4B8 — sparkles (model)
-- ` ` U+F5DC — brain (context)
+- `` U+E28C — brain (context)
 - ` ` U+F017 — clock (5h quota)
 - ` ` U+F073 — calendar (7d quota)
 - `󰌟` U+E31F — plug (MCP)
 - ` ` U+F457 — plus / ` ` U+F458 — minus (lines diff)
 
-Segment bg colors:
-- cwd: #5f5faf | model: #0087af | context: dynamic (V3) | 5h: #875faf | 7d: #005f87 | mcp: #5f8700 | diff: #875f5f
-- All fg: #eeeeee (white)
+Segment bg colors (Catppuccin accent):
+| segment | Dark (Macchiato) | Light (Latte) |
+|---------|-------------------|----------------|
+| cwd | Blue #8aadf4 (256:111) | Blue #1e66f5 (256:27) |
+| model | Mauve #c6a0f6 (256:183) | Mauve #8839ef (256:99) |
+| context | dynamic (V3, accent bg) | dynamic (V3, accent bg) |
+| 5h | Lavender #b4befe (256:147) | Lavender #7287fd (256:69) |
+| 7d | Sapphire #7dc4e4 (256:116) | Sapphire #209fb5 (256:31) |
+| mcp | Teal #8bd5ca (256:152) | Teal #179299 (256:30) |
+| diff | Peach #fab387 (256:216) | Peach #fe640b (256:208) |
+
+Dark fg: Base #1e2030 (256:17). Light fg: Base #eff1f5 (256:231).
+Dark bar fills: Base 17 (filled), Surface2 60 (empty). Light bar fills: Base 231 (filled), Surface2 146 (empty).
+Dark context bg: Green 150, Yellow 223, Red 210. Light context bg: Green 70, Yellow 172, Red 161.
 
 ## §B — Bugs
 | id | date | cause | fix |
 |----|------|-------|-----|
 | B1 | 2026-04-23 | API unit values changed (5→3, 168→6), code hardcoded old values → quota 0% | V9 |
 | B2 | 2026-04-23 | Powerline separator fg=white instead of next-bg → broken visual transition | V10 |
+| B3 | 2026-04-24 | V10 stated wrong direction: fg=next-bg instead of fg=prev-bg. Code used bg escape (48;5) not fg (38;5) for separator → inherited FG_WHITE | V10 |
+| B4 | 2026-04-24 | Context bg used arbitrary ANSI colors (28/142/160) not Catppuccin accent → looked generic | V12 |
